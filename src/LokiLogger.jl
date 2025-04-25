@@ -49,7 +49,13 @@ function Logger(fmt::Function, server::Union{String,URI};
 end
 Logger(server::Union{String,URI}; kwargs...) = Logger(logfmt, server; kwargs...)
 
-function Logging.handle_message(loki::Logger, args...; kwargs...)
+#function Logging.handle_message(loki::Logger, args...; kwargs...)
+
+function testsend(loki::Logger, level, message; kwargs...)
+    return send(loki, level, message, "MODULE", "GROUP", "ID", "FILE", 0; kwargs...)
+end
+
+function send(loki::Logger, args...; kwargs...)
     log_args = handle_message_args(args...; kwargs...)
     logline = strip(sprint(loki.fmt, log_args))
     payload = Dict("streams" => [
@@ -67,9 +73,7 @@ function Logging.handle_message(loki::Logger, args...; kwargs...)
     headers = ["Content-Type" => "application/json" ]#, "Content-Length" => string(sizeof(msg))]
     # TODO: Implement some kind of flushing timer instead of sending for every message
     
-    response = HTTP.post(loki.server, headers, json_bytes)
-    println("Status: ", response.status)
-    println("Response body: ", String(response.body))
+    HTTP.post(loki.server, headers, json_bytes)
     return nothing
 end
 Logging.shouldlog(loki::Logger, args...) = true
