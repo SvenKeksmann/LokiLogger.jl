@@ -76,15 +76,6 @@ Logging.shouldlog(loki::Logger, args...) = true
 Logging.min_enabled_level(loki::Logger) = Logging.BelowMinLevel
 Logging.catch_exceptions(loki::Logger) = true
 
-##########TEMP Global logger initialize
-intLogger = nothing
-function init()
-    Logging.global_logger(Logger(LokiLogger.json, "http://localhost:3100"; labels=Dict("host" => gethostname(), "app" => "LokiLogger.jl")))
-
-    @debug "Logger initialized!"
-    return nothing
-end
-
 # Formats
 
 lvlstr(lvl::Logging.LogLevel) = lvl >= Logging.Error ? "error" :
