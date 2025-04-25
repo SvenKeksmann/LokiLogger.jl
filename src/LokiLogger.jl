@@ -49,36 +49,41 @@ function Logger(fmt::Function, server::Union{String,URI};
 end
 Logger(server::Union{String,URI}; kwargs...) = Logger(logfmt, server; kwargs...)
 
-#function Logging.handle_message(loki::Logger, args...; kwargs...)
-
-function testsend(loki::Logger, level, message; kwargs...)
-    return send(loki, level, message, "MODULE", "GROUP", "ID", "FILE", 0; kwargs...)
-end
-
-function send(loki::Logger, args...; kwargs...)
-    log_args = handle_message_args(args...; kwargs...)
-    logline = strip(sprint(loki.fmt, log_args))
-    payload = Dict("streams" => [
-        Dict{String,Any}(
-            "stream" => loki.labels,
-            "values" => [
-                [string(round(Int, time() * 1e9)), logline],
-            ]
-        )
-    ])
-    #msg = sprint(JSON3.write, payload)
-    json_string = JSON3.write(payload)
-    json_bytes = Vector{UInt8}(codeunits(json_string))
-
-    headers = ["Content-Type" => "application/json" ]#, "Content-Length" => string(sizeof(msg))]
-    # TODO: Implement some kind of flushing timer instead of sending for every message
+function Logging.handle_message(loki::Logger, args...; kwargs...)
+    Logging.with_logger(Logging.NullLogger()) do
+        log_args = handle_message_args(args...; kwargs...)
+        logline = strip(sprint(loki.fmt, log_args))
+        payload = Dict("streams" => [
+            Dict{String,Any}(
+                "stream" => loki.labels,
+                "values" => [
+                    [string(round(Int, time() * 1e9)), logline],
+                ]
+            )
+        ])
+        #msg = sprint(JSON3.write, payload)
+        json_string = JSON3.write(payload)
+        json_bytes = Vector{UInt8}(codeunits(json_string))
     
-    HTTP.post(loki.server, headers, json_bytes)
+        headers = ["Content-Type" => "application/json" ]#, "Content-Length" => string(sizeof(msg))]
+        # TODO: Implement some kind of flushing timer instead of sending for every message
+        
+        HTTP.post(loki.server, headers, json_bytes)
+    end
     return nothing
 end
 Logging.shouldlog(loki::Logger, args...) = true
 Logging.min_enabled_level(loki::Logger) = Logging.BelowMinLevel
 Logging.catch_exceptions(loki::Logger) = true
+
+##########TEMP Global logger initialize
+intLogger = nothing
+function init()
+    Logging.global_logger(Logger(LokiLogger.json, "http://localhost:3100"; labels=Dict("host" => gethostname(), "app" => "LokiLogger.jl")))
+
+    @debug "Logger initialized!"
+    return nothing
+end
 
 # Formats
 
