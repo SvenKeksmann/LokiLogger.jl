@@ -52,7 +52,7 @@ Logger(server::Union{String,URI}; kwargs...) = Logger(logfmt, server; kwargs...)
 function Logging.handle_message(loki::Logger, args...; kwargs...)
     log_args = handle_message_args(args...; kwargs...)
     logline = strip(sprint(loki.fmt, log_args))
-    json = Dict("streams" => [
+    payload = Dict("streams" => [
         Dict{String,Any}(
             "stream" => loki.labels,
             "values" => [
@@ -60,10 +60,13 @@ function Logging.handle_message(loki::Logger, args...; kwargs...)
             ]
         )
     ])
-    msg = sprint(JSON3.write, json)
-    headers = ["Content-Type" => "application/json", "Content-Length" => string(sizeof(msg))]
+    #msg = sprint(JSON3.write, payload)
+    json_string = JSON3.write(payload)
+    json_bytes = Vector{UInt8}(codeunits(json_string))
+
+    headers = ["Content-Type" => "application/json" ]#, "Content-Length" => string(sizeof(msg))]
     # TODO: Implement some kind of flushing timer instead of sending for every message
-    HTTP.post(loki.server, headers, msg)
+    HTTP.post(loki.server, headers, json_bytes)
     return nothing
 end
 Logging.shouldlog(loki::Logger, args...) = true
