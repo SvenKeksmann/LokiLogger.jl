@@ -66,7 +66,9 @@ function Logging.handle_message(loki::Logger, args...; kwargs...)
 
     headers = ["Content-Type" => "application/json" ]#, "Content-Length" => string(sizeof(msg))]
     # TODO: Implement some kind of flushing timer instead of sending for every message
-    HTTP.post(loki.server, headers, json_bytes)
+    response = HTTP.post(loki.server, headers, json_bytes)
+    println("Status: ", response.status)
+    println("Response body: ", String(response.body))
     return nothing
 end
 Logging.shouldlog(loki::Logger, args...) = true
