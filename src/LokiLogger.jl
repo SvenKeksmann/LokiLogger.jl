@@ -56,7 +56,7 @@ function Logging.handle_message(loki::Logger, args...; kwargs...)
         Dict{String,Any}(
             "stream" => loki.labels,
             "values" => [
-                String[string(round(Int, time() * 1e9)), logline],
+                [string(round(Int, time() * 1e9)), logline],
             ]
         )
     ])
@@ -66,6 +66,7 @@ function Logging.handle_message(loki::Logger, args...; kwargs...)
 
     headers = ["Content-Type" => "application/json" ]#, "Content-Length" => string(sizeof(msg))]
     # TODO: Implement some kind of flushing timer instead of sending for every message
+    
     response = HTTP.post(loki.server, headers, json_bytes)
     println("Status: ", response.status)
     println("Response body: ", String(response.body))
